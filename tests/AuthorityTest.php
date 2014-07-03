@@ -117,6 +117,6 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 
         $this->auth->allow('comment', 'User');
 
-        $this->assertFalse($this->auth->can('comment', $user));
+        $this->assertTrue($this->auth->can('comment', 'User', $user));
     }
 }
