@@ -119,4 +119,18 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 
         $this->assertTrue($this->auth->can('comment', 'User', $user));
     }
+	
+	public function testRolebasedRuleOverridesRecordbasedRule()
+	{
+		// Record based
+		$this->auth->allow('comment', 'User', function ($self, $a_user) {
+			// Needs isset($a_user) because this rule is called without $a_user...
+			return isset($a_user) && $self->getCurrentUser()->id != $a_user->id;
+		});
+
+		// Role based
+		$this->auth->allow('comment', 'User');
+
+		$this->assertTrue($this->auth->can('comment', 'User'));
+	}	
 }
