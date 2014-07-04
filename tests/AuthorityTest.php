@@ -64,9 +64,9 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 		$this->auth->addAlias('manage', array('create', 'read', 'update', 'delete'));
 		$this->auth->addAlias('comment', array('read', 'comment'));
 
-		$this->auth->deny('read', 'User');
-		$this->auth->allow('comment', 'User');
 		$this->auth->allow('manage', 'User');
+		$this->auth->allow('comment', 'User');
+		$this->auth->deny('read', 'User');
 
 		$this->assertCount(3, $this->auth->getRulesFor('read', 'User'));
 	}
@@ -76,9 +76,9 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 		$this->auth->addAlias('manage', array('create', 'read', 'update', 'delete'));
 		$this->auth->addAlias('comment', array('read', 'create'));
 
-		$this->auth->deny('read', 'User');
-		$this->auth->allow('comment', 'User');
 		$this->auth->allow('manage', 'User');
+		$this->auth->allow('comment', 'User');
+		$this->auth->deny('read', 'User');
 
 		$this->assertTrue($this->auth->can('manage', 'User'));
 		$this->assertTrue($this->auth->can('create', 'User'));
@@ -93,47 +93,47 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 		$user2 = new stdClass;
 		$user2->id = 2;
 
+		$this->auth->allow('comment', 'User', function ($self, $a_user) {
+			return $self->getCurrentUser()->id == $a_user->id;
+		});
+
 		$this->auth->deny('read', 'User', function ($self, $a_user) {
 			return $self->getCurrentUser()->id != $a_user->id;
 		});
 
-		$this->auth->allow('comment', 'User', function ($self, $a_user) {
-			return $self->getCurrentUser()->id == $a_user->id;
-		});
-		
 		$this->assertFalse($this->auth->can('comment', $user));
 		$this->assertTrue($this->auth->can('comment', 'User', $user));
 		$this->assertFalse($this->auth->can('comment', $user2));
 		$this->assertFalse($this->auth->can('comment', 'User', $user2));
 	}
 
-	public function testFirstRuleOverridesPreviousRules()
+	public function testLastRuleOverridesPreviousRules()
 	{
 		$user = $this->user;
-
-		$this->auth->allow('comment', 'User');
 
 		$this->auth->allow('comment', 'User', function ($self, $a_user) {
 			return $self->getCurrentUser()->id != $a_user->id;
 		});
-		
-		$this->assertTrue($this->auth->can('comment', 'User', $user));
-	}
 
-	public function testRolebasedRuleOverridesRecordbasedRule()
-	{
-		// Role based
 		$this->auth->allow('comment', 'User');
 
+		$this->assertTrue($this->auth->can('comment', 'User', $user));
+	}
+	
+	public function testRolebasedRuleOverridesRecordbasedRule()
+	{
 		// Record based
 		$this->auth->allow('comment', 'User', function ($self, $a_user) {
 			// Needs isset($a_user) because this rule is called without $a_user...
 			return isset($a_user) && $self->getCurrentUser()->id != $a_user->id;
 		});
-		
+
+		// Role based
+		$this->auth->allow('comment', 'User');
+
 		$this->assertTrue($this->auth->can('comment', 'User'));
-	}	
-	
+	}
+
 	public function testDocumentation()
 	{
 		$user = $this->user;
@@ -150,8 +150,11 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 				'delete'
 			));
 
+		// Let's allow a User to see all other User resources
+		$this->auth->allow('read', 'User');
+		
 		/*
-		 * First let's restrict a User to managing only himself or herself through
+		 * Now let's restrict a User to managing only himself or herself through
 		 * the use of a conditional callback.
 		 *
 		 * Callback Parameters:
@@ -165,9 +168,6 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 				// be granted, else it will be denied.
 				return isset($user) && $self->user()->id === $user->id;
 			});
-
-		// Let's allow a User to see all other User resources
-		$this->auth->allow('read', 'User');
 
 		// Now we can check to see if our rules are configured properly
 

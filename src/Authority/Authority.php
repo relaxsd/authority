@@ -77,13 +77,14 @@ class Authority
 			$resource = get_class($resourceValue);
 		}
 
-		$rules = $this->getRulesFor($action, $resource);
-
-		foreach ($rules->all() as $rule) {
-			if ($rule->applies($self, $resourceValue)) {
+		$repo = $this->getRulesFor($action, $resource);
+		$rules = $repo->all();
+		// Iterate over the rules bottom-to-top (most significant rules first)
+		for ($r=count($rules)-1; $r>=0;$r--) {
+			if ($rules[$r]->applies($self, $resourceValue)) {
 				// This rule specifically allows OR denies access
 				// Return true if it's a privilige, false if it's a restriction
-				return $rule->isPrivilege(); 
+				return $rules[$r]->isPrivilege(); 
 			}
 		}
 
