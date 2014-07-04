@@ -134,6 +134,28 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 		$this->assertTrue($this->auth->can('comment', 'User'));
 	}
 
+	public function testNoLastRuleTrump()
+	{
+		$user1 = (object) array('id' => 1);
+		$user2 = (object) array('id' => 2);
+		$user3 = (object) array('id' => 3);
+		
+		$this->auth->allow('delete', 'User');
+		$this->auth->deny('delete', 'User', function ($self, $a_user) {
+			return isset($a_user) && $a_user->id == 1;
+		});
+		$this->auth->deny('delete', 'User', function ($self, $a_user) {
+			return isset($a_user) && $a_user->id == 2;
+		});
+		
+		// Should not be able to delete user 1 because of second rule!
+		$this->assertFalse($this->auth->can('delete', 'User', $user1));
+		// Should not be able to delete user 2 because of last rule
+		$this->assertFalse($this->auth->can('delete', 'User', $user2));
+		// Should be able to delete user 3 because of first rule
+		$this->assertTrue($this->auth->can('delete', 'User', $user3));
+	}
+		
 	public function testDocumentation()
 	{
 		$user = $this->user;
