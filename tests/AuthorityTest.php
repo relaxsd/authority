@@ -101,37 +101,48 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 			return $self->getCurrentUser()->id != $a_user->id;
 		});
 
-		$this->assertFalse($this->auth->can('comment', $user));
 		$this->assertTrue($this->auth->can('comment', 'User', $user));
-		$this->assertFalse($this->auth->can('comment', $user2));
 		$this->assertFalse($this->auth->can('comment', 'User', $user2));
+
+		// False because $user is a StdClass, not a User
+		$this->assertFalse($this->auth->can('comment', $user));
+		$this->assertFalse($this->auth->can('comment', $user2));
 	}
 
-	public function testLastRuleOverridesPreviousRules()
+	public function testLastRuleOverridesPreviousRules_1()
 	{
-		$user = $this->user;
-
-		$this->auth->allow('comment', 'User', function ($self, $a_user) {
-			return $self->getCurrentUser()->id != $a_user->id;
+		$this->auth->deny('comment', 'User', function ($self, $a_user) {
+			return true; // Always applies, so deny
 		});
 
 		$this->auth->allow('comment', 'User');
 
-		$this->assertTrue($this->auth->can('comment', 'User', $user));
-	}
-	
-	public function testRolebasedRuleOverridesRecordbasedRule()
-	{
-		// Record based
-		$this->auth->allow('comment', 'User', function ($self, $a_user) {
-			// Needs isset($a_user) because this rule is called without $a_user...
-			return isset($a_user) && $self->getCurrentUser()->id != $a_user->id;
-		});
-
-		// Role based
-		$this->auth->allow('comment', 'User');
-
+		// Allowed because of second rule
 		$this->assertTrue($this->auth->can('comment', 'User'));
+
+		// Allowed because of second rule
+		$this->assertTrue($this->auth->can('comment', 'User', $this->user));
+
+		// False because $user is a StdClass, not a User
+		$this->assertFalse($this->auth->can('comment', $this->user));
+	}
+
+	public function testLastRuleOverridesPreviousRules_2()
+	{
+		$this->auth->allow('comment', 'User');
+
+		$this->auth->deny('comment', 'User', function ($self, $a_user) {
+			return true; // Always applies, so deny
+		});
+
+		// Denied because of second rule
+		$this->assertFalse($this->auth->can('comment', 'User'));
+
+		// Denied because of second rule
+		$this->assertFalse($this->auth->can('comment', 'User', $this->user));
+
+		// Denied because $user is a StdClass, not a User
+		$this->assertFalse($this->auth->can('comment', $this->user));
 	}
 
 	public function testNoLastRuleTrump()
@@ -148,12 +159,14 @@ class AuthorityTest extends PHPUnit_Framework_TestCase
 			return isset($a_user) && $a_user->id == 2;
 		});
 		
-		// Should not be able to delete user 1 because of second rule!
+		// Not allowed to delete user 1 because of second rule!
 		$this->assertFalse($this->auth->can('delete', 'User', $user1));
-		// Should not be able to delete user 2 because of last rule
+		// Not allowed to delete user 2 because of last rule
 		$this->assertFalse($this->auth->can('delete', 'User', $user2));
-		// Should be able to delete user 3 because of first rule
+		// Allowed to delete user 3 because of first rule
 		$this->assertTrue($this->auth->can('delete', 'User', $user3));
+		// Allowed to delete users in general because of first rule
+		$this->assertTrue($this->auth->can('delete', 'User'));
 	}
 		
 	public function testDocumentation()
