@@ -91,7 +91,7 @@ class Rule
 	/**
 	 * Determine if current rule is relevant based on an action and resource
 	 *
-	 * @param string        $action Action in question
+	 * @param string|array        $action Action in question
 	 * @param string|mixed  $resource Name of resource or instance of object
 	 * @return boolean
 	 */
@@ -103,13 +103,14 @@ class Rule
 	/**
 	 * Determine if the instance's action matches the one passed in
 	 *
-	 * @param string $action Action in question
+	 * @param string|array $action Action in question
 	 * @return boolean
 	 */
 	public function matchesAction($action)
 	{
-		$action = (array) $action;
-		return in_array($this->action,$action);
+		return is_array($action)
+			? in_array($this->action,$action)
+			: $this->action === $action;
 	}
 
 	/**

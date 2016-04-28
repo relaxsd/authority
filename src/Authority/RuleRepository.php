@@ -60,7 +60,7 @@ class RuleRepository implements Countable, ArrayAccess, IteratorAggregate
     /**
      * Get all rules only relevant to the given action and resource
      *
-     * @param string $action Action to check against
+     * @param string|array $action Action(s) to check against
      * @param string $resource Resource to check against
      * @return RuleRepository
      */

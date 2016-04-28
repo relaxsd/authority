@@ -5,6 +5,7 @@
  * @package Authority
  */
 namespace Authority;
+use Illuminate\Events\Dispatcher;
 
 /**
  * Authority allows for establishing rules to check against for authorization
@@ -32,6 +33,9 @@ class Authority
 	 * @var Dispatcher Dispatcher for events
 	 */
 	protected $dispatcher;
+
+	/** @var array Rules cache for action/resource combinations */
+	protected $actionResourceRulesCache = [];
 
 	/**
 	 * Authority constructor
@@ -67,7 +71,11 @@ class Authority
 	/**
 	 * Determine if current user can access the given action and resource
 	 *
-	 * @return boolean
+	 * @param string $action
+	 * @param mixed $resource
+	 * @param mixed|null $resourceValue
+	 *
+	 * @return bool
 	 */
 	public function can($action, $resource, $resourceValue = null)
 	{
@@ -96,6 +104,10 @@ class Authority
 	 * Determine if current user cannot access the given action and resource
 	 * Returns negation of can()
 	 *
+	 * @param string $action
+	 * @param mixed $resource
+	 * @param mixed|null $resourceValue
+	 *
 	 * @return boolean
 	 */
 	public function cannot($action, $resource, $resourceValue = null)
@@ -108,7 +120,7 @@ class Authority
 	 *
 	 * @param string        $action Action for the rule
 	 * @param mixed         $resource Resource for the rule
-	 * @param Closure|null  $condition Optional condition for the rule
+	 * @param \Closure|null  $condition Optional condition for the rule
 	 * @return Rule
 	 */
 	public function allow($action, $resource, $condition = null)
@@ -121,7 +133,7 @@ class Authority
 	 *
 	 * @param string        $action Action for the rule
 	 * @param mixed         $resource Resource for the rule
-	 * @param Closure|null  $condition Optional condition for the rule
+	 * @param \Closure|null  $condition Optional condition for the rule
 	 * @return Rule
 	 */
 	public function deny($action, $resource, $condition = null)
@@ -135,7 +147,7 @@ class Authority
 	 * @param boolean       $allow True if privilege, false if restriction
 	 * @param string        $action Action for the rule
 	 * @param mixed         $resource Resource for the rule
-	 * @param Closure|null  $condition Optional condition for the rule
+	 * @param \Closure|null  $condition Optional condition for the rule
 	 * @return Rule
 	 */
 	public function addRule($allow, $action, $resource, $condition = null)
@@ -184,12 +196,24 @@ class Authority
 	/**
 	 * Returns all rules relevant to the given action and resource
 	 *
+	 * @param string $action
+	 * @param string $resource
+	 *
 	 * @return RuleRepository
 	 */
 	public function getRulesFor($action, $resource)
 	{
-		$aliases = $this->getAliasesForAction($action);
-		return $this->rules->getRelevantRules($aliases, $resource);
+		$key = "{$action}:{$resource}";
+
+		// because isRelevant() is kind of expensive, results are cached
+		if (!isset($this->actionResourceRulesCache[$key])) {
+
+			$aliases = $this->getAliasesForAction($action);
+			$this->actionResourceRulesCache[$key] = $this->rules->getRelevantRules($aliases, $resource);
+		}
+
+		return $this->actionResourceRulesCache[$key];
+
 	}
 
 	/**
